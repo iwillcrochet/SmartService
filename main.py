@@ -47,11 +47,10 @@ def main():
     else:
         EXCLUDE_COLS = [MASTER_KEY, TARGET_COL]
     X = df.drop(EXCLUDE_COLS, axis=1)
-    print(X.head())
 
     # split into training and testing sets
     from sklearn.model_selection import train_test_split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=True, random_state=RANDOM_SEED)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, shuffle=True, random_state=RANDOM_SEED)
 
     # Normalize the data
     from sklearn.preprocessing import StandardScaler
@@ -141,10 +140,10 @@ def main():
     from torchinfo import summary
     summary(model, input_size=(INPUT_SIZE,), device=DEVICE)
 
-
     # print
     print(f"Device: {DEVICE}")
     print(f"Number of features: {X_train.shape[1]}")
+    print(f"Feature names: {X.columns.to_list()}")
     print(f"Number of training samples: {X_train.shape[0]}")
     print(f"Number of testing samples: {X_test.shape[0]}")
 
@@ -162,7 +161,7 @@ def main():
     progress_bar = trange(NUM_EPOCHS, desc="Training")
     for epoch in progress_bar:
         # training
-        train_loss, train_mse = train_fn(train_data_loader, model, loss_fn, DEVICE, optimizer, scheduler)
+        train_loss = train_fn(train_data_loader, model, loss_fn, DEVICE, optimizer, scheduler)
 
         # testing
         test_loss, mse, rmse, mae = eval_fn(test_data_loader, model, loss_fn, DEVICE)
@@ -173,7 +172,7 @@ def main():
         if epoch % 10 == 0:
             # print training loss and test metrics:
             print(
-                f"Epoch: {epoch}, Train Loss: {train_loss:.4f}, Train MSE:{train_mse:.4f}, Test Loss:{test_loss:.4f}, Test MSE: {mse:.2f}, Test RMSE: {rmse:.2f}, Test MAE: {mae:.2f}")
+                f"Epoch: {epoch}, Train Loss: {train_loss:.4f}, Test Loss:{test_loss:.4f}, Test RMSE: {rmse:.2f}, Test MAE: {mae:.2f}, LR: {optimizer.param_groups[0]['lr']:.6f}")
 
         # Save the best model
         if test_loss < best_test_loss:

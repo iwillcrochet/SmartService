@@ -21,8 +21,6 @@ def train_fn(loader, model, loss_fn, device, optimizer, scheduler):
 
     epoch_loss = 0
     num_batches = 0
-    y_true = []
-    y_pred = []
 
     # iterate over batches
     for batch_idx, (X, y) in enumerate(loader):
@@ -51,15 +49,10 @@ def train_fn(loader, model, loss_fn, device, optimizer, scheduler):
         epoch_loss += loss.item()
         num_batches += 1
 
-        # store true and predicted values
-        y_true.extend(y.cpu().numpy().tolist())
-        y_pred.extend(preds.cpu().detach().numpy().tolist())
-
     # calculate average epoch loss
     epoch_loss = epoch_loss / num_batches
-    mse = mean_squared_error(y_true, y_pred)
 
-    return epoch_loss, mse
+    return epoch_loss
 
 
 def eval_fn(loader, model, loss_fn, device):
