@@ -1,7 +1,8 @@
-import tqdm
 import torch
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+import numpy as np
 
-def train_fn(loader, model, optimizer, loss_fn, device, epoch, scheduler):
+def train_fn(loader, model, loss_fn, device, optimizer, scheduler):
     """Train function for training the model
 
     :param loader   (torch.utils.data.DataLoader): training dataloader
@@ -15,20 +16,19 @@ def train_fn(loader, model, optimizer, loss_fn, device, epoch, scheduler):
     :return: None
     """
 
-    # set tqdm loop with epoch number
-    loop = tqdm(loader, desc=f"Epoch {epoch}")
-
     # set model to train mode
     model.train()
 
     epoch_loss = 0
-    num_batches = len(loader)
+    num_batches = 0
+    y_true = []
+    y_pred = []
 
     # iterate over batches
-    for batch_idx, (X, y) in enumerate(loop):
-        # convert data and targets to tensors and move them to the device
-        X = torch.tensor(X.values, dtype=torch.float32).to(device)
-        y = torch.tensor(y.values, dtype=torch.float32).unsqueeze(1).to(device)
+    for batch_idx, (X, y) in enumerate(loader):
+        # put data and targets to device
+        X = X.to(device)
+        y = y.to(device)
 
         # forward pass
         preds = model(X)
@@ -44,26 +44,25 @@ def train_fn(loader, model, optimizer, loss_fn, device, epoch, scheduler):
         # update optimizer
         optimizer.step()
 
-        epoch_loss += loss.item()
-
-        # update tqdm loop
-        loop.set_postfix(loss=f"{loss.item():.4f}")
-
         # step scheduer on batch
         scheduler.step()
 
+        # update epoch_loss + observation count
+        epoch_loss += loss.item()
+        num_batches += 1
+
+        # store true and predicted values
+        y_true.extend(y.cpu().numpy().tolist())
+        y_pred.extend(preds.cpu().detach().numpy().tolist())
+
     # calculate average epoch loss
     epoch_loss = epoch_loss / num_batches
+    mse = mean_squared_error(y_true, y_pred)
 
-    # update tqdm loop
-    loop.set_postfix(loss=f"{epoch_loss:.4f}")
+    return epoch_loss, mse
 
-    return epoch_loss
 
-from sklearn.metrics import mean_absolute_error, mean_squared_error
-import numpy as np
-
-def eval_fn(loader, model, device, loss_fn):
+def eval_fn(loader, model, loss_fn, device):
     """Evaluation function for evaluating the model
 
     :param loader   (torch.utils.data.DataLoader): testing dataloader
@@ -81,14 +80,14 @@ def eval_fn(loader, model, device, loss_fn):
     y_pred = []
 
     test_epoch_loss = 0
-    num_batches = len(loader)
+    num_batches = 0
 
     # disable gradient calculation
-    with torch.no_grad():
+    with torch.inference_mode():
         for batch_idx, (X, y) in enumerate(loader):
-            # convert data and targets to tensors and move them to the device
-            X = torch.tensor(X.values, dtype=torch.float32).to(device)
-            y = torch.tensor(y.values, dtype=torch.float32).unsqueeze(1).to(device)
+            # put data and targets to device
+            X = X.to(device)
+            y = y.to(device)
 
             # forward pass
             preds = model(X)
@@ -101,6 +100,9 @@ def eval_fn(loader, model, device, loss_fn):
             y_true.extend(y.cpu().numpy().tolist())
             y_pred.extend(preds.cpu().numpy().tolist())
 
+            # update batch count
+            num_batches += 1
+
     mse = mean_squared_error(y_true, y_pred)
     rmse = np.sqrt(mse)
     mae = mean_absolute_error(y_true, y_pred)
@@ -108,8 +110,6 @@ def eval_fn(loader, model, device, loss_fn):
     # calculate average test loss
     test_epoch_loss = test_epoch_loss / num_batches
 
+    model.train()
+
     return test_epoch_loss, mse, rmse, mae
-
-
-
-
