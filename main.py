@@ -17,10 +17,10 @@ def main():
     else:
         NUM_WORKERS = 0
     PIN_MEMORY = True
-    FILE_NAME = "dummy_regression.csv"
-    TARGET_COL = 'target'
-    MASTER_KEY = "id"
-    EXCLUDE_COLS = [None]
+    FILE_NAME = "data_charger_energy_EVs_cleaned.csv"
+    TARGET_COL = 'total_capacity'
+    MASTER_KEY = "PC6"
+    EXCLUDE_COLS = ["number_of_charger"]
 
     ############################
     # set seeds
@@ -36,7 +36,6 @@ def main():
     ############################
     # load data frame
     df = pd.read_csv(FILE_NAME)
-    print(df.head())
 
     # target
     y = df[TARGET_COL]
@@ -44,7 +43,7 @@ def main():
     # feature -> all columns except the target and master key
     # concatenate the list of columns to exclude with the master key
     if EXCLUDE_COLS[0] is not None:
-        EXCLUDE_COLS.append(MASTER_KEY, TARGET_COL)
+        EXCLUDE_COLS = EXCLUDE_COLS + [MASTER_KEY, TARGET_COL]
     else:
         EXCLUDE_COLS = [MASTER_KEY, TARGET_COL]
     X = df.drop(EXCLUDE_COLS, axis=1)
@@ -116,7 +115,8 @@ def main():
         output_size=OUTPUT_SIZE,
         num_hidden_layers=NUM_HIDDEN_LAYERS,
         nodes_per_layer=NODES_PER_LAYER,
-        dropout_rate=0
+        # ToDo: RMSE seems to have an error when dropout is used
+        dropout_rate=0.2
     )
     model.to(DEVICE)
 
