@@ -7,7 +7,7 @@ def main():
     # Hyperparameters
     ############################
     RANDOM_SEED = 42
-    LEARNING_RATE = 1e-5 # (0.0001)
+    LEARNING_RATE = 3e-5 # (0.0001)
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     BATCH_SIZE = 8
     NUM_EPOCHS = 1000
