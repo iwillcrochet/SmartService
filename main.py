@@ -1,13 +1,15 @@
 import torch
+import pandas as pd
+import os
 
 def main():
     ############################
     # Hyperparameters
     ############################
     RANDOM_SEED = 42
-    LEARNING_RATE = 1e-4 # (0.0001)
+    LEARNING_RATE = 5e-5 # (0.0001)
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-    BATCH_SIZE = 16
+    BATCH_SIZE = 4
     NUM_EPOCHS = 5000
     if DEVICE == "cuda":
         NUM_WORKERS = 4
@@ -73,15 +75,15 @@ def main():
     ############################
     # instantiate model
     from model import FullyConnectedModel
-    NUM_HIDDEN_LAYERS = 12
-    NODES_PER_LAYER = 120
+    NUM_HIDDEN_LAYERS = 10
+    NODES_PER_LAYER = 300
 
     model = FullyConnectedModel(
         input_size=INPUT_SIZE,
         output_size=OUTPUT_SIZE,
         num_hidden_layers=NUM_HIDDEN_LAYERS,
         nodes_per_layer=NODES_PER_LAYER,
-        dropout_rate=0.3
+        dropout_rate=0.1
     )
     model.to(DEVICE)
 
@@ -132,6 +134,9 @@ def main():
 
     best_test_loss = float('inf')  # initialize with a high value
 
+    # Initialize an empty DataFrame for storing metrics
+    metrics_df = pd.DataFrame(columns=["epoch", "train_loss", "test_loss", "test_rmse", "test_mae"])
+
     # Train and evaluate the model
     progress_bar = trange(NUM_EPOCHS)
     for epoch in progress_bar:
@@ -144,10 +149,20 @@ def main():
         # Update the progress bar with the current epoch loss
         progress_bar.set_postfix({"train_loss": f"{train_loss:.4f}"})
 
+        # log metrics
+        data = pd.DataFrame(
+            {"epoch": [epoch], "train_loss": [train_loss], "test_loss": [test_loss], "test_rmse": [rmse],
+             "test_mae": [mae]})
+        metrics_df = pd.concat([metrics_df, data], ignore_index=True)
+
         if epoch % 10 == 0:
             # print training loss and test metrics:
             print(
                 f"Epoch: {epoch}, Train Loss: {train_loss:.4f}, Test Loss:{test_loss:.4f}, Test RMSE: {rmse:.2f}, Test MAE: {mae:.2f}, LR: {optimizer.param_groups[0]['lr']:.6f}")
+
+            # Save metrics DataFrame to a CSV file
+            cwd = os.getcwd()
+            metrics_df.to_csv(os.path.join(cwd, 'models', 'metrics.csv'), index=False)
 
         # Save the best model
         if test_loss < best_test_loss:

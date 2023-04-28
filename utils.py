@@ -1,5 +1,6 @@
 import os
 import torch
+import pandas as pd
 
 def test_tensor_shapes(train_data_loader, test_data_loader, input_size):
     for loader in [train_data_loader, test_data_loader]:
