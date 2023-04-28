@@ -5,7 +5,7 @@ class FullyConnectedModel(nn.Module):
     """
     linear model, fully connected NN, allows for non-linearities via ReLU
     -> built by stacking layer blocks with a for looop, each block consists of a linear layer followed by a non-linear activation function"""
-    def __init__(self, input_size, output_size, num_hidden_layers, nodes_per_layer, dropout_rate=0.5):
+    def __init__(self, input_size, output_size, num_hidden_layers, nodes_per_layer, dropout_rate=0.1):
         super(FullyConnectedModel, self).__init__()
 
         self.layers = nn.ModuleList()
@@ -31,6 +31,57 @@ class FullyConnectedModel(nn.Module):
             x = layer(x)
         return x
 
+class HalfingModel(nn.Module):
+    def __init__(self, input_size, output_size, num_blocks=2, dropout_rate=0.1):
+        super(HalfingModel, self).__init__()
+
+        layers = []
+
+        in_features = input_size * 8
+
+        # Initial layer
+        layers.append(nn.Linear(input_size, in_features))
+        layers.append(nn.ReLU())
+
+
+
+        for _ in range(num_blocks):
+            # Half the number of features after every block
+            block = nn.Sequential(
+                nn.Linear(in_features, in_features//2),
+                nn.BatchNorm1d(in_features//2),
+                nn.ReLU(),
+
+
+                nn.Linear( in_features//2,  in_features//4),
+                nn.BatchNorm1d(in_features//4),
+                nn.ReLU(),
+                nn.Dropout(dropout_rate),
+            )
+            layers.append(block)
+
+            in_features = in_features // 4
+            print(f"block: {block}, in_features: {in_features}")
+
+        self.blocks = nn.Sequential(*layers)
+
+        # Final block
+        # @GPT: do it in the same style as above
+        final_block = nn.Sequential(
+            nn.Linear(in_features, input_size*2),
+            nn.ReLU(),
+
+            nn.Linear(input_size*2, input_size//2),
+            nn.ReLU(),
+
+            nn.Linear(input_size//2, output_size)
+        )
+        self.final_block = final_block
+
+    def forward(self, x):
+        x = self.blocks(x)
+        x = self.final_block(x)
+        return x
 
 #####################
 # LSTM 1
