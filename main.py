@@ -10,7 +10,7 @@ def main():
     LEARNING_RATE = 1e-5 # (0.0001)
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     BATCH_SIZE = 8
-    NUM_EPOCHS = 5000
+    NUM_EPOCHS = 1000
     if DEVICE == "cuda":
         NUM_WORKERS = 2
     else:

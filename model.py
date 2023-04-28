@@ -37,7 +37,7 @@ class HalfingModel(nn.Module):
 
         layers = []
 
-        in_features = input_size * 64
+        in_features = input_size * 32
 
         # Initial layer
         layers.append(nn.Linear(input_size, in_features))
@@ -68,13 +68,13 @@ class HalfingModel(nn.Module):
         # Final block
         # @GPT: do it in the same style as above
         final_block = nn.Sequential(
-            nn.Linear(in_features, input_size*2),
+            nn.Linear(in_features, input_size*4),
             nn.ReLU(),
 
-            nn.Linear(input_size*2, input_size//2),
+            nn.Linear(input_size*4, input_size*2),
             nn.ReLU(),
 
-            nn.Linear(input_size//2, output_size)
+            nn.Linear(input_size*2, output_size)
         )
         self.final_block = final_block
 
