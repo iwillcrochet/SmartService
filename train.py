@@ -20,7 +20,7 @@ def train_fn(loader, model, loss_fn, device, optimizer, scheduler):
     model.train()
 
     epoch_loss = 0
-    num_batches = 0
+    total_samples = 0
 
     # iterate over batches
     for batch_idx, (X, y) in enumerate(loader):
@@ -45,12 +45,13 @@ def train_fn(loader, model, loss_fn, device, optimizer, scheduler):
         # step scheduer on batch
         scheduler.step()
 
-        # update epoch_loss + observation count
-        epoch_loss += loss.item()
-        num_batches += 1
+        # update epoch_loss and total_samples
+        batch_size = X.size(0)
+        epoch_loss += loss.item() * batch_size
+        total_samples += batch_size
 
-    # calculate average epoch loss
-    epoch_loss = epoch_loss / num_batches
+    # Calculate the average epoch loss
+    epoch_loss /= total_samples
 
     return epoch_loss
 
@@ -72,8 +73,8 @@ def eval_fn(loader, model, loss_fn, device):
     y_true = []
     y_pred = []
 
-    test_epoch_loss = 0
-    num_batches = 0
+    epoch_loss = 0
+    total_samples = 0
 
     # disable gradient calculation
     with torch.inference_mode():
@@ -87,22 +88,24 @@ def eval_fn(loader, model, loss_fn, device):
 
             # calculate loss
             loss = loss_fn(preds, y)
-            test_epoch_loss += loss.item()
+
+            # update epoch_loss and total_samples
+            batch_size = X.size(0)
+            epoch_loss += loss.item() * batch_size
+            total_samples += batch_size
 
             # store true and predicted values
             y_true.extend(y.cpu().numpy().tolist())
             y_pred.extend(preds.cpu().numpy().tolist())
 
-            # update batch count
-            num_batches += 1
+    # Calculate the average epoch loss
+    epoch_loss /= total_samples
 
+    # Calculate MSE, RMSE, MAE
     mse = mean_squared_error(y_true, y_pred)
     rmse = np.sqrt(mse)
     mae = mean_absolute_error(y_true, y_pred)
 
-    # calculate average test loss
-    test_epoch_loss = test_epoch_loss / num_batches
-
     model.train()
 
-    return test_epoch_loss, mse, rmse, mae
+    return epoch_loss, mse, rmse, mae
