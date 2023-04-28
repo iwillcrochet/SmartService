@@ -7,9 +7,9 @@ def main():
     # Hyperparameters
     ############################
     RANDOM_SEED = 42
-    LEARNING_RATE = 5e-5 # (0.0001)
+    LEARNING_RATE = 2e-5 # (0.0001)
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-    BATCH_SIZE = 32
+    BATCH_SIZE = 64
     NUM_EPOCHS = 5000
     if DEVICE == "cuda":
         NUM_WORKERS = 2
@@ -92,8 +92,8 @@ def main():
     model = HalfingModel(
         input_size=INPUT_SIZE,
         output_size=OUTPUT_SIZE,
-        num_blocks=2,
-        dropout_rate=0.1
+        num_blocks=3,
+        dropout_rate=0.15
     )
     model.to(DEVICE)
 
@@ -116,7 +116,7 @@ def main():
 
     # optimizer -> Adam
     from torch import optim
-    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-6)
+    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-7)
 
     # scheduler -> cosine annealing with warm restarts
     from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
@@ -157,7 +157,7 @@ def main():
         test_loss, mse, rmse, mae = eval_fn(test_data_loader, model, loss_fn, DEVICE)
 
         # Update the progress bar with the current epoch loss
-        progress_bar.set_postfix({"train_loss": f"{train_loss:.4f}"})
+        progress_bar.set_postfix({"train_loss": f"{format(train_loss, ',.2f')}"})
 
         # log metrics
         data = pd.DataFrame(
@@ -168,7 +168,7 @@ def main():
         if epoch % 10 == 0:
             # print training loss and test metrics:
             print(
-                f"Epoch: {epoch}, Train Loss: {train_loss:.4f}, Test Loss:{test_loss:.4f}, Test RMSE: {rmse:.2f}, Test MAE: {mae:.2f}, LR: {optimizer.param_groups[0]['lr']:.6f}")
+                f"Epoch: {epoch}, Train Loss: {format(train_loss, ',.2f')}, Test Loss:{format(test_loss, ',.2f')}, Test RMSE: {format(rmse, ',.2f')}, LR: {optimizer.param_groups[0]['lr']:.6f}")
 
             # Save metrics DataFrame to a CSV file
             cwd = os.getcwd()
