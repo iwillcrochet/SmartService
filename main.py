@@ -7,7 +7,7 @@ def main():
     # Hyperparameters
     ############################
     RANDOM_SEED = 42
-    LEARNING_RATE = 3e-5 # (0.0001)
+    LEARNING_RATE = 5e-5 # (0.0001)
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     BATCH_SIZE = 16
     NUM_EPOCHS = 2000
@@ -93,7 +93,7 @@ def main():
         input_size=INPUT_SIZE,
         output_size=OUTPUT_SIZE,
         num_blocks=2,
-        dropout_rate=0.15
+        dropout_rate=0.1
     )
     model.to(DEVICE)
 

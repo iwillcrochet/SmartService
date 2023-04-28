@@ -51,16 +51,17 @@ class HalfingModel(nn.Module):
                 nn.Linear(in_features, in_features//2),
                 nn.BatchNorm1d(in_features//2),
                 nn.ReLU(),
+                nn.Dropout(dropout_rate),
 
 
-                nn.Linear( in_features//2,  in_features//4),
-                nn.BatchNorm1d(in_features//4),
+                nn.Linear( in_features//2,  in_features//2),
+                nn.BatchNorm1d(in_features//2),
                 nn.ReLU(),
                 nn.Dropout(dropout_rate),
             )
             layers.append(block)
 
-            in_features = in_features // 4
+            in_features = in_features // 2
             print(f"block: {block}, in_features: {in_features}")
 
         self.blocks = nn.Sequential(*layers)
