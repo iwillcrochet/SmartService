@@ -37,7 +37,7 @@ class HalfingModel(nn.Module):
 
         layers = []
 
-        in_features = input_size * 32
+        in_features = input_size * 16
 
         # Initial layer
         layers.append(nn.Linear(input_size, in_features))
