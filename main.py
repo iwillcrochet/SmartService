@@ -134,10 +134,6 @@ def main():
     # print
     print(f"Device: {DEVICE}")
 
-    # mount google drive in colab
-    from google.colab import drive
-    drive.mount('/content/drive')
-
     ############################
     # train model
     ############################
