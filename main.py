@@ -7,10 +7,10 @@ def main():
     # Hyperparameters
     ############################
     RANDOM_SEED = 42
-    LEARNING_RATE = 1e-4 # (0.0001)
+    LEARNING_RATE = 5e-5 # (0.0001)
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     BATCH_SIZE = 32
-    NUM_EPOCHS = 500
+    NUM_EPOCHS = 5000
     if DEVICE == "cuda":
         NUM_WORKERS = 2
     else:
@@ -122,7 +122,7 @@ def main():
     from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
     scheduler = CosineAnnealingWarmRestarts(
         optimizer,
-        T_0=int(NUM_EPOCHS*len(train_data_loader)*0.10),
+        T_0=int(NUM_EPOCHS*len(train_data_loader)*0.05),
         T_mult=2,
         eta_min=LEARNING_RATE * 1e-4,
     )
