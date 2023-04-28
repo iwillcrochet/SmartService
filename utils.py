@@ -1,10 +1,11 @@
 import os
 import torch
+import pandas as pd
 
 def test_tensor_shapes(train_data_loader, test_data_loader, input_size):
     for loader in [train_data_loader, test_data_loader]:
         for idx, (X, y) in enumerate(loader):
-            assert X.shape[1] == input_size, f"Expected input size: {input_size}, got: {X.shape[1]}"
+            assert X.shape[-1] == input_size, f"Expected input size: {input_size}, got: {X.shape[1]}"
             assert y.shape[1] == 1, f"Output tensor shape mismatch. Expected: 1, Found: {len(y.shape)}"
             if idx >= 2:
                 break

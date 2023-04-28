@@ -1,84 +1,52 @@
 import torch
-import random
-import numpy as np
 import pandas as pd
+import os
 
 def main():
     ############################
     # Hyperparameters
     ############################
     RANDOM_SEED = 42
-    LEARNING_RATE = 1e-4 # (0.0001)
+    LEARNING_RATE = 5e-5 # (0.0001)
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-    BATCH_SIZE = 1024
+    BATCH_SIZE = 4
     NUM_EPOCHS = 5000
     if DEVICE == "cuda":
         NUM_WORKERS = 4
     else:
         NUM_WORKERS = 0
     PIN_MEMORY = True
-    FILE_NAME = "data_charger_energy_EVs_cleaned.csv"
-    TARGET_COL = 'total_capacity'
-    MASTER_KEY = "PC6"
-    EXCLUDE_COLS = ["number_of_charger"]
+    LSTM = False
 
-    ############################
-    # set seeds
-    ############################
-    random.seed(RANDOM_SEED)
-    np.random.seed(RANDOM_SEED)
-    torch.cuda.manual_seed(RANDOM_SEED)
-    torch.manual_seed(RANDOM_SEED)
-    torch.backends.cudnn.deterministic = False
+    # fetch data
+    from data_preparation import prepare_data
+    X_train, X_test, y_train, y_test, _ = prepare_data()
 
-    ############################
-    # load data frame and declare features and target
-    ############################
-    # load data frame
-    df = pd.read_csv(FILE_NAME)
+    # convert y_train and y_test to numpy arrays
+    y_train = y_train.to_numpy()
+    y_test = y_test.to_numpy()
 
-    # target
-    y = df[TARGET_COL]
-
-    # feature -> all columns except the target and master key
-    # concatenate the list of columns to exclude with the master key
-    if EXCLUDE_COLS[0] is not None:
-        EXCLUDE_COLS = EXCLUDE_COLS + [MASTER_KEY, TARGET_COL]
-    else:
-        EXCLUDE_COLS = [MASTER_KEY, TARGET_COL]
-    X = df.drop(EXCLUDE_COLS, axis=1)
-    print(X.head())
-
-    # split into training and testing sets
-    from sklearn.model_selection import train_test_split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=True, random_state=RANDOM_SEED)
-
-    # Normalize the data
-    from sklearn.preprocessing import StandardScaler
-    scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
-
-    # impute missing values
-    from sklearn.impute import SimpleImputer
-    imputer = SimpleImputer(strategy='mean')
-    X_train = imputer.fit_transform(X_train)
-    X_test = imputer.transform(X_test)
+    # prepare data for LSTM
+    from dataset import create_lookback_dataset
+    if LSTM:
+        LOOKBACK = 7
+        X_train, y_train = create_lookback_dataset(X_train, y_train, LOOKBACK)
+        X_test, y_test = create_lookback_dataset(X_test, y_test, LOOKBACK)
+        print(f"Tensors reshaped for LSTM, new shape is: {X_train.shape, X_test.shape, y_train.shape, y_test.shape}")
 
     # specify input and output sizes
-    INPUT_SIZE = X_train.shape[1]
+    INPUT_SIZE = X_train.shape[-1]
     OUTPUT_SIZE = 1
 
     ############################
     # create data loaders
     ############################
-
     # import data loader
     from torch.utils.data import DataLoader
     from dataset import CustomDataset
 
     # create training data loader
-    train_dataset = CustomDataset(X_train, y_train.to_numpy())
+    train_dataset = CustomDataset(X_train, y_train)
     train_data_loader = DataLoader(
         dataset=train_dataset,
         batch_size=BATCH_SIZE,
@@ -89,7 +57,7 @@ def main():
     )
 
     # create testing data loader
-    test_dataset = CustomDataset(X_test, y_test.to_numpy())
+    test_dataset = CustomDataset(X_test, y_test)
     test_data_loader = DataLoader(
         dataset=test_dataset,
         batch_size=BATCH_SIZE,
@@ -107,18 +75,30 @@ def main():
     ############################
     # instantiate model
     from model import FullyConnectedModel
-    NUM_HIDDEN_LAYERS = 15
-    NODES_PER_LAYER = 40
+    NUM_HIDDEN_LAYERS = 10
+    NODES_PER_LAYER = 300
 
     model = FullyConnectedModel(
         input_size=INPUT_SIZE,
         output_size=OUTPUT_SIZE,
         num_hidden_layers=NUM_HIDDEN_LAYERS,
         nodes_per_layer=NODES_PER_LAYER,
-        # ToDo: RMSE seems to have an error when dropout is used
-        dropout_rate=0.2
+        dropout_rate=0.1
     )
     model.to(DEVICE)
+
+    # LSTM
+    if LSTM:
+        from model import LSTM1
+        model = LSTM1(input_size=INPUT_SIZE,
+                      hidden_size=4,
+                      num_stacked_layers=1,
+                      device=DEVICE)
+        model.to(DEVICE)
+
+    ############################
+    # Loss, optimizer, scheduler
+    ############################
 
     # loss function -> RMSE
     from torch import nn
@@ -126,7 +106,7 @@ def main():
 
     # optimizer -> Adam
     from torch import optim
-    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-5)
+    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-6)
 
     # scheduler -> cosine annealing with warm restarts
     from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
@@ -141,12 +121,8 @@ def main():
     from torchinfo import summary
     summary(model, input_size=(INPUT_SIZE,), device=DEVICE)
 
-
     # print
     print(f"Device: {DEVICE}")
-    print(f"Number of features: {X_train.shape[1]}")
-    print(f"Number of training samples: {X_train.shape[0]}")
-    print(f"Number of testing samples: {X_test.shape[0]}")
 
     ############################
     # train model
@@ -158,11 +134,14 @@ def main():
 
     best_test_loss = float('inf')  # initialize with a high value
 
+    # Initialize an empty DataFrame for storing metrics
+    metrics_df = pd.DataFrame(columns=["epoch", "train_loss", "test_loss", "test_rmse", "test_mae"])
+
     # Train and evaluate the model
-    progress_bar = trange(NUM_EPOCHS, desc="Training")
+    progress_bar = trange(NUM_EPOCHS)
     for epoch in progress_bar:
         # training
-        train_loss, train_mse = train_fn(train_data_loader, model, loss_fn, DEVICE, optimizer, scheduler)
+        train_loss = train_fn(train_data_loader, model, loss_fn, DEVICE, optimizer, scheduler)
 
         # testing
         test_loss, mse, rmse, mae = eval_fn(test_data_loader, model, loss_fn, DEVICE)
@@ -170,10 +149,20 @@ def main():
         # Update the progress bar with the current epoch loss
         progress_bar.set_postfix({"train_loss": f"{train_loss:.4f}"})
 
+        # log metrics
+        data = pd.DataFrame(
+            {"epoch": [epoch], "train_loss": [train_loss], "test_loss": [test_loss], "test_rmse": [rmse],
+             "test_mae": [mae]})
+        metrics_df = pd.concat([metrics_df, data], ignore_index=True)
+
         if epoch % 10 == 0:
             # print training loss and test metrics:
             print(
-                f"Epoch: {epoch}, Train Loss: {train_loss:.4f}, Train MSE:{train_mse:.4f}, Test Loss:{test_loss:.4f}, Test MSE: {mse:.2f}, Test RMSE: {rmse:.2f}, Test MAE: {mae:.2f}")
+                f"Epoch: {epoch}, Train Loss: {train_loss:.4f}, Test Loss:{test_loss:.4f}, Test RMSE: {rmse:.2f}, Test MAE: {mae:.2f}, LR: {optimizer.param_groups[0]['lr']:.6f}")
+
+            # Save metrics DataFrame to a CSV file
+            cwd = os.getcwd()
+            metrics_df.to_csv(os.path.join(cwd, 'models', 'metrics.csv'), index=False)
 
         # Save the best model
         if test_loss < best_test_loss:
