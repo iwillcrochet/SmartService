@@ -4,40 +4,40 @@ import torch
 class FullyConnectedModel(nn.Module):
     """
     linear model, fully connected NN, allows for non-linearities via ReLU
-    -> built by stacking layer blocks with a for looop, each block consists of a linear layer followed by a non-linear activation function"""
+    -> built by stacking layer blocks, each block consists of a linear layer followed by a non-linear activation function"""
     def __init__(self, input_size, output_size, num_hidden_layers, nodes_per_layer, dropout_rate=0.1):
         super(FullyConnectedModel, self).__init__()
 
-        self.layers = nn.ModuleList()
+        layers = []
 
         # Input layer
-        self.layers.append(nn.Linear(input_size, nodes_per_layer))
-        self.layers.append(nn.ReLU())
+        layers.append(nn.Linear(input_size, nodes_per_layer))
+        layers.append(nn.ReLU())
 
         # Hidden layers
         for i in range(num_hidden_layers - 1):
-            self.layers.append(nn.Linear(nodes_per_layer, nodes_per_layer))
-            self.layers.append(nn.ReLU())
+            layers.append(nn.Linear(nodes_per_layer, nodes_per_layer))
+            layers.append(nn.ReLU())
 
             # Add a dropout layer after every 2 blocks except for the final block
             if (i + 1) % 2 == 0 and i != num_hidden_layers - 2:
-                self.layers.append(nn.Dropout(dropout_rate))
+                layers.append(nn.Dropout(dropout_rate))
 
         # Output layer
-        self.layers.append(nn.Linear(nodes_per_layer, output_size))
+        layers.append(nn.Linear(nodes_per_layer, output_size))
+
+        self.model = nn.Sequential(*layers)
 
     def forward(self, x):
-        for layer in self.layers:
-            x = layer(x)
-        return x
+        return self.model(x)
 
 class HalfingModel(nn.Module):
-    def __init__(self, input_size, output_size, num_blocks=2, dropout_rate=0.1):
+    def __init__(self, input_size, output_size, factor = 8, num_blocks=2, dropout_rate=0.1):
         super(HalfingModel, self).__init__()
 
         layers = []
 
-        in_features = input_size * 8
+        in_features = input_size * factor
 
         # Initial layer
         layers.append(nn.Linear(input_size, in_features))

@@ -5,9 +5,9 @@ from sklearn.preprocessing import MinMaxScaler
 
 def prepare_data(pytorch=True):
     RANDOM_STATE = 42
-    FILE_NAME = "Kaggle_Hosue_Price.csv"
-    TARGET_COL = 'Saleprice'
-    MASTER_KEY = "Id"
+    FILE_NAME = "data_charger_energy_EVs_cleaned.csv"
+    TARGET_COL = "total_capacity"
+    MASTER_KEY = "PC6"
     EXCLUDE_COLS = [None]
     SCALE = True
     IMPUTE = True

@@ -9,8 +9,8 @@ def main():
     RANDOM_SEED = 42
     LEARNING_RATE = 5e-5 # (0.0001)
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-    BATCH_SIZE = 16
-    NUM_EPOCHS = 2000
+    BATCH_SIZE = 4
+    NUM_EPOCHS = 1000
     if DEVICE == "cuda":
         NUM_WORKERS = 2
     else:
@@ -20,7 +20,7 @@ def main():
 
     # fetch data
     from data_preparation import prepare_data
-    X_train, X_test, y_train, y_test, _ = prepare_data()
+    X_train, X_test, y_train, y_test, _ = prepare_data(pytorch=True)
 
     # convert y_train and y_test to numpy arrays
     y_train = y_train.to_numpy()
@@ -75,27 +75,28 @@ def main():
     ############################
     # FC model
     from model import FullyConnectedModel
-    NUM_HIDDEN_LAYERS = 16
-    NODES_PER_LAYER = 500
+    NUM_HIDDEN_LAYERS = 8
+    NODES_PER_LAYER = 300
 
     model = FullyConnectedModel(
         input_size=INPUT_SIZE,
         output_size=OUTPUT_SIZE,
         num_hidden_layers=NUM_HIDDEN_LAYERS,
         nodes_per_layer=NODES_PER_LAYER,
-        dropout_rate=0.15
+        dropout_rate=0.05
     )
     model.to(DEVICE)
 
     # Halfing model
-    from model import HalfingModel
-    model = HalfingModel(
-        input_size=INPUT_SIZE,
-        output_size=OUTPUT_SIZE,
-        num_blocks=2,
-        dropout_rate=0.1
-    )
-    model.to(DEVICE)
+    # from model import HalfingModel
+    # model = HalfingModel(
+    #     input_size=INPUT_SIZE,
+    #     output_size=OUTPUT_SIZE,
+    #     factor=20,
+    #     num_blocks=3,
+    #     dropout_rate=0
+    # )
+    # model.to(DEVICE)
 
 
     # LSTM
@@ -122,7 +123,7 @@ def main():
     from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
     scheduler = CosineAnnealingWarmRestarts(
         optimizer,
-        T_0=int(NUM_EPOCHS*len(train_data_loader)*0.05),
+        T_0=int(NUM_EPOCHS*len(train_data_loader)*0.03),
         T_mult=2,
         eta_min=LEARNING_RATE * 1e-4,
     )
