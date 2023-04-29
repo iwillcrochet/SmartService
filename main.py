@@ -2,6 +2,7 @@ import torch
 import pandas as pd
 import os
 
+
 def main():
     ############################
     # Hyperparameters
@@ -74,11 +75,24 @@ def main():
     # create model
     ############################
     # FC model
-    from model import FullyConnectedModel
+    from model import MLP
     NUM_HIDDEN_LAYERS = 8
     NODES_PER_LAYER = 300
 
-    model = FullyConnectedModel(
+    model = MLP(
+        input_size=INPUT_SIZE,
+        output_size=OUTPUT_SIZE,
+        num_hidden_layers=NUM_HIDDEN_LAYERS,
+        nodes_per_layer=NODES_PER_LAYER,
+        dropout_rate=0.05
+    )
+    model.to(DEVICE)
+
+    # MLP with BatchNorm
+    from model import MLPWithBatchNorm
+    NUM_HIDDEN_LAYERS = 8
+    NODES_PER_LAYER = 300
+    model = MLPWithBatchNorm(
         input_size=INPUT_SIZE,
         output_size=OUTPUT_SIZE,
         num_hidden_layers=NUM_HIDDEN_LAYERS,
@@ -117,7 +131,8 @@ def main():
 
     # optimizer -> Adam
     from torch import optim
-    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-6)
+    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-5)
+    optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-2)
 
     # scheduler -> cosine annealing with warm restarts
     from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
@@ -127,6 +142,15 @@ def main():
         T_mult=2,
         eta_min=LEARNING_RATE * 1e-4,
     )
+
+    # GradualWarmupScheduler
+    from utils import GradualWarmupScheduler
+    WARMUP_EPOCHS = int(NUM_EPOCHS*len(train_data_loader)*0.03)
+    scheduler = GradualWarmupScheduler(optimizer,
+                                       multiplier=1,
+                                       total_epoch=WARMUP_EPOCHS, # when to stop warmup
+                                       after_scheduler=scheduler,
+                                       is_batch = True)
 
     # print model summary using torchsummary
     from torchinfo import summary

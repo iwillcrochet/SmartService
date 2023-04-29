@@ -1,12 +1,12 @@
 from torch import nn
 import torch
 
-class FullyConnectedModel(nn.Module):
+class MLP(nn.Module):
     """
     linear model, fully connected NN, allows for non-linearities via ReLU
     -> built by stacking layer blocks, each block consists of a linear layer followed by a non-linear activation function"""
     def __init__(self, input_size, output_size, num_hidden_layers, nodes_per_layer, dropout_rate=0.1):
-        super(FullyConnectedModel, self).__init__()
+        super(MLP, self).__init__()
 
         layers = []
 
@@ -17,6 +17,35 @@ class FullyConnectedModel(nn.Module):
         # Hidden layers
         for i in range(num_hidden_layers - 1):
             layers.append(nn.Linear(nodes_per_layer, nodes_per_layer))
+            layers.append(nn.ReLU())
+
+            # Add a dropout layer after every 2 blocks except for the final block
+            if (i + 1) % 2 == 0 and i != num_hidden_layers - 2:
+                layers.append(nn.Dropout(dropout_rate))
+
+        # Output layer
+        layers.append(nn.Linear(nodes_per_layer, output_size))
+
+        self.model = nn.Sequential(*layers)
+
+    def forward(self, x):
+        return self.model(x)
+
+class MLPWithBatchNorm(nn.Module):
+    def __init__(self, input_size, output_size, num_hidden_layers, nodes_per_layer, dropout_rate=0.1):
+        super(MLPWithBatchNorm, self).__init__()
+
+        layers = []
+
+        # Input layer
+        layers.append(nn.Linear(input_size, nodes_per_layer))
+        layers.append(nn.BatchNorm1d(nodes_per_layer))
+        layers.append(nn.ReLU())
+
+        # Hidden layers
+        for i in range(num_hidden_layers - 1):
+            layers.append(nn.Linear(nodes_per_layer, nodes_per_layer))
+            layers.append(nn.BatchNorm1d(nodes_per_layer))
             layers.append(nn.ReLU())
 
             # Add a dropout layer after every 2 blocks except for the final block
