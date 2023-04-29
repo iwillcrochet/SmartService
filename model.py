@@ -1,5 +1,6 @@
 from torch import nn
 import torch
+import torch.nn.functional as F
 
 class MLP(nn.Module):
     """
@@ -148,7 +149,6 @@ input_dim = 1
 hidden_dim = 32
 num_layers = 2
 output_dim = 1
-
 
 # Here we define our model as a class
 class LSTM(nn.Module):

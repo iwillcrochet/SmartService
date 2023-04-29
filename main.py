@@ -17,7 +17,7 @@ def main():
     else:
         NUM_WORKERS = 0
     PIN_MEMORY = True
-    LSTM = False
+    LSTM = True
 
     # fetch data
     from data_preparation import prepare_data
@@ -120,6 +120,7 @@ def main():
                       hidden_size=4,
                       num_stacked_layers=1,
                       device=DEVICE)
+        model.to(DEVICE)
 
     ############################
     # Loss, optimizer, scheduler
@@ -154,7 +155,8 @@ def main():
 
     # print model summary using torchsummary
     from torchinfo import summary
-    summary(model, input_size=(BATCH_SIZE, INPUT_SIZE), device=DEVICE)  # Update the input_size to (BATCH_SIZE, INPUT_SIZE)
+    tensor_shape = (BATCH_SIZE, LOOKBACK, INPUT_SIZE) if LSTM else (BATCH_SIZE, INPUT_SIZE)
+    summary(model, input_size=tensor_shape, device=DEVICE)  # Update the input_size to (BATCH_SIZE, INPUT_SIZE)
 
     # print
     print(f"Device: {DEVICE}")
