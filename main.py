@@ -17,7 +17,7 @@ def main():
     else:
         NUM_WORKERS = 0
     PIN_MEMORY = True
-    LSTM = True
+    LSTM = False
 
     # fetch data
     from data_preparation import prepare_data
